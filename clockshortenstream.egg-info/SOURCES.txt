@@ -1,0 +1,7 @@
+setup.py
+clockshortenstream/__init__.py
+clockshortenstream.egg-info/PKG-INFO
+clockshortenstream.egg-info/SOURCES.txt
+clockshortenstream.egg-info/dependency_links.txt
+clockshortenstream.egg-info/not-zip-safe
+clockshortenstream.egg-info/top_level.txt
