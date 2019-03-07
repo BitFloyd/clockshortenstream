@@ -514,7 +514,7 @@ class DetectClockInVideo:
 
 class ShortenVideoStream:
 
-    def __init__(self,path_to_input_video,path_to_output_video):
+    def __init__(self,path_to_input_video):
         self.path_to_input_video = path_to_input_video
 
 
