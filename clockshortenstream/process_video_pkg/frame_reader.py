@@ -77,10 +77,11 @@ class FrameReader:
         self.videoFrameWidth = int(self.videoContainer.get(3))
         self.videoFrameHeight = int(self.videoContainer.get(4))
 
-        message_print("VIDEO FPS:" + str(self.videoFPS))
-        message_print("NUMBER OF FRAMES IN VIDEO:" + str(self.numFrames))
-        message_print("FRAME WIDTH:"+str(self.videoFrameWidth))
-        message_print("FRAME HEIGHT:" + str(self.videoFrameHeight))
+        if debug_mode:
+            message_print("VIDEO FPS:" + str(self.videoFPS))
+            message_print("NUMBER OF FRAMES IN VIDEO:" + str(self.numFrames))
+            message_print("FRAME WIDTH:"+str(self.videoFrameWidth))
+            message_print("FRAME HEIGHT:" + str(self.videoFrameHeight))
 
 
         self.videoFinished = False
