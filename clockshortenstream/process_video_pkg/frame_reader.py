@@ -121,6 +121,13 @@ class FrameReader:
 
         return frame
 
+    def getFrameAtFrameNumber(self,frame_num):
+
+        self.videoContainer.set(cv2.CAP_PROP_POS_FRAMES, frame_num)
+        frame = self.readNextFrameFromVideo()
+
+        return frame
+
     def closeFrameReader(self):
         self.videoContainer.release()
         return True
