@@ -103,6 +103,15 @@ class FrameReader:
 
         return frame
 
+    def getNumberOfFramesFromPosition(self,start_frame_id,num_frames):
+
+        frames_list = []
+        self.videoContainer.set(cv2.CAP_PROP_POS_FRAMES, start_frame_id)
+        for i in range(0,num_frames):
+            frames_list.append(self.readNextFrameFromVideo())
+
+        return frames_list
+
 
     def getFrameAfterTSeconds(self,t=0):
 
