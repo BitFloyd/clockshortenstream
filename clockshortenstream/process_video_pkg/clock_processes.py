@@ -514,9 +514,9 @@ class DetectClockInVideo:
 
 class ShortenVideoStream:
 
-    def __init__(self,path_to_input_video):
+    def __init__(self,path_to_input_video,commercial_removed=True):
         self.path_to_input_video = path_to_input_video
-
+        self.commercial_removed = commercial_removed
 
     def remove_commercial_from_video(self,path_to_output_video):
         commercialRemover = CommercialRemoverBasic(path_to_input_video=self.path_to_input_video,
@@ -527,9 +527,8 @@ class ShortenVideoStream:
 
     def shorten_video_stream(self,path_to_output_video):
 
-        commercialRemover = CommercialRemoverBasic(path_to_input_video=self.path_to_input_video)
-        commercialRemover.remove_frames_with_commercial_break_in_progress()
-
+        if(not self.commercial_removed):
+            self.remove_commercial_from_video(path_to_output_video)
 
         stream = Stream(path_to_input_video=self.path_to_input_video, time_resolution=1)
         getBoxes = GetBoxesInStream(stream)
