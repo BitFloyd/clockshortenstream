@@ -96,14 +96,14 @@ class GetXYLimitsOfBoxes:
         x_stats = (x_stats * (x_stats > self.x_threshold)).tolist()
         x_stats_limits = [n for n, i in enumerate(x_stats) if i > 0]
         x_limits = (x_stats_limits[0], x_stats_limits[-1])
-        print 'x_limits:', x_limits
+        print ('x_limits:', x_limits)
 
         y_stats = self.y_stats.transpose()[0] / np.max(self.y_stats.transpose()[0])
 
         y_stats = (y_stats * (y_stats > self.y_threshold)).tolist()
         y_stats_limits = [n for n, i in enumerate(y_stats) if i > 0]
         y_limits = (y_stats_limits[0], y_stats_limits[-1])
-        print 'y_limits:', y_limits
+        print ('y_limits:', y_limits)
 
         self.limits = (x_limits,y_limits)
 

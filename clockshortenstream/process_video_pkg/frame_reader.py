@@ -49,6 +49,11 @@ class Stream:
 
         return frame
 
+    def getTimeOfFrameInSeconds(self):
+        time = self.frameReader.frameNumber*self.time_resolution
+
+        return time
+
     def restart_Stream(self):
         self.frameReader.closeFrameReader()
         self.frameReader = self.get_frameReader()
