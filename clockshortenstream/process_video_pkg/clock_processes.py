@@ -11,6 +11,7 @@ from ..logging_pkg.logging import *
 from ..functionals_pkg.save_objects import *
 from skimage.measure import compare_ssim
 from commercial_break_remover import CommercialRemoverBasic
+from moviepy.editor import VideoFileClip, concatenate_videoclips
 
 
 class GetBoxesInStream:
@@ -437,37 +438,19 @@ class WriteTimeIntervalsToVideo:
 
         return self.frameWriter
 
+    def concatenate_clips(self):
+        list_of_clips = []
+
+        for times in self.time_intervals:
+            list_of_clips.append(VideoFileClip(self.stream.path_to_input_video).subclip(times[0], times[1]))
+
+        final_clip = concatenate_videoclips(list_of_clips)
+        final_clip.write_videofile(self.path_to_output_video)
+
     def write_time_intervals_to_video(self):
 
-        self.stream.restart_Stream()
-        frame = self.stream.readNextFrameFromVideo()
-        fps = self.stream.frameReader.videoFPS
-        self.getFrameWriter(frame_shape=frame.shape,write_fps=fps)
-
-        self.stream.restart_Stream()
-        self.frameWriter.openVideoStream()
-        end_point_last = 0
-        for i in tqdm(self.time_intervals):
-
-            start_point = i[0]
-            end_point = i[1]
-
-            frame = self.stream.frameReader.getFrameAfterTSeconds(start_point-end_point_last)
-            if(self.stream.frameReader.videoFinished):
-                message_print("VIDEO FINISHED DETECTED AT TIME INTERVAL:"+str(i))
-                break
-            self.frameWriter.writeFrameToVideo(frame)
-
-            while self.stream.frameReader.frameNumber < fps*end_point:
-                frame = self.stream.frameReader.readNextFrameFromVideo()
-                if (self.stream.frameReader.videoFinished):
-                    message_print("VIDEO FINISHED DETECTED AT TIME INTERVAL:" + str(i))
-                    break
-                self.frameWriter.writeFrameToVideo(frame)
-
-            end_point_last = end_point
-
-        self.frameWriter.closeVideoStream()
+        print self.time_intervals
+        self.concatenate_clips()
 
         return True
 
