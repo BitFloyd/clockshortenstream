@@ -4,6 +4,7 @@ from moviepy.editor import VideoFileClip, concatenate_videoclips
 from skimage.measure import compare_ssim
 from tqdm import tqdm
 
+from subtitle_processes import SubtitleManager, concatenate_subtitles, SubtitlesClip
 from frame_reader import Stream
 from frame_writer import *
 from ..process_frame_pkg.framepy import *
@@ -11,10 +12,12 @@ from ..process_frame_pkg.framepy import *
 
 class CommercialRemoverBasic:
 
-    def __init__(self, path_to_input_video, path_to_output_video, ad_image=None):
+    def __init__(self, path_to_input_video, path_to_input_srt, path_to_output_video, path_to_output_srt, ad_image=None):
 
         self.path_to_input_video = path_to_input_video
+        self.path_to_input_srt = path_to_input_srt
         self.path_to_output_video = path_to_output_video
+        self.path_to_output_srt = path_to_output_srt
         self.stream = Stream(path_to_input_video=self.path_to_input_video, time_resolution=None)
 
         self.save_path, self.output_filename = os.path.split(path_to_output_video)
@@ -30,12 +33,22 @@ class CommercialRemoverBasic:
 
     def concatenate_clips(self):
         list_of_clips = []
+        list_of_subs = []
 
         for times in self.times_of_non_commercial:
+            time_of_all_clips_before = 0
+            for clip in list_of_clips:
+                time_of_all_clips_before += clip.duration
+
             list_of_clips.append(VideoFileClip(self.path_to_input_video).subclip(times[0], times[1]))
+            list_of_subs.append(SubtitleManager(self.path_to_input_srt).subclip(times[0],times[1],time_of_all_clips_before))
+
 
         final_clip = concatenate_videoclips(list_of_clips)
+        final_srt = concatenate_subtitles(list_of_subs)
         final_clip.write_videofile(self.path_to_output_video)
+
+        SubtitlesClip(subtitles=final_srt).write_srt(self.path_to_output_srt)
 
         return True
 
@@ -44,14 +57,10 @@ class CommercialRemoverBasic:
         frame = self.stream.readNextFrameFromVideo()
 
         progress_bar = tqdm(total=self.stream.time_in_seconds * self.stream.frameReader.videoFPS)
-        # self.frameWriter = FrameWriter(save_path=self.save_path, video_name=self.output_filename,
-        #                                frame_size=frame.shape, video_fps=self.stream.frameReader.videoFPS)
 
         ad_image_resized = cv2.resize(self.ad_image, dsize=None, fx=0.25, fy=0.25)
         ad_image_cropped = crop_image_to_percent(img=ad_image_resized, axis='y', part_image='bottom', percentage=0.65)
         ad_image_cropped = crop_image_to_percent(img=ad_image_cropped, axis='y', part_image='top', percentage=0.35)
-
-        # self.frameWriter.openVideoStream()
 
         time_tup = [0.0, None]
         ad_off = True
@@ -78,8 +87,6 @@ class CommercialRemoverBasic:
                     time_tup = [self.stream.getTimeOfFrameInSeconds(), None]
                     ad_off = True
 
-                # self.frameWriter.writeFrameToVideo(frame)
-
             frame = self.stream.readNextFrameFromVideo()
             progress_bar.update(1)
 
@@ -88,8 +95,6 @@ class CommercialRemoverBasic:
         if (time_tup[1] == None):
             time_tup[1] = self.stream.time_in_seconds
             self.times_of_non_commercial.append(time_tup)
-
-        # self.frameWriter.closeVideoStream()
 
         print (self.times_of_non_commercial)
 

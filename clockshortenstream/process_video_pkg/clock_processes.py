@@ -1,5 +1,6 @@
 import os
 from frame_reader import Stream
+from subtitle_processes import SubtitleManager, concatenate_subtitles, SubtitlesClip
 from ..functionals_pkg.plot_functions import plot_histogram
 from skimage.io import imsave
 from frame_writer import FrameWriter
@@ -348,7 +349,6 @@ class GetTimeIntervalsWithClocks:
         self.time_resolution = self.stream.time_resolution
         self.max_clock_disappear_allowance_time = 15
 
-
     def create_frame_time_lists(self):
 
         self.stream.restart_Stream()
@@ -440,12 +440,24 @@ class WriteTimeIntervalsToVideo:
 
     def concatenate_clips(self):
         list_of_clips = []
+        list_of_subs = []
 
-        for times in self.time_intervals:
-            list_of_clips.append(VideoFileClip(self.stream.path_to_input_video).subclip(times[0], times[1]))
+        for times in self.times_of_non_commercial:
+            time_of_all_clips_before = 0
+            for clip in list_of_clips:
+                time_of_all_clips_before += clip.duration
+
+            list_of_clips.append(VideoFileClip(self.path_to_input_video).subclip(times[0], times[1]))
+            list_of_subs.append(SubtitleManager(self.path_to_input_srt).subclip(times[0],times[1], time_of_all_clips_before))
+
 
         final_clip = concatenate_videoclips(list_of_clips)
+        final_srt = concatenate_subtitles(list_of_subs)
         final_clip.write_videofile(self.path_to_output_video)
+
+        SubtitlesClip(subtitles=final_srt).write_srt(self.path_to_output_srt)
+
+        return True
 
     def write_time_intervals_to_video(self):
 
@@ -497,23 +509,36 @@ class DetectClockInVideo:
 
 class ShortenVideoStream:
 
-    def __init__(self,path_to_input_video,commercial_removed=True):
+    def __init__(self, path_to_input_video, path_to_input_srt, commercial_removed=True):
+
         self.path_to_input_video = path_to_input_video
+        self.path_to_input_srt = path_to_input_srt
+
+
         self.commercial_removed = commercial_removed
 
-    def remove_commercial_from_video(self,path_to_output_video):
+        if(not self.commercial_removed):
+            filename,ext = os.path.splitext(self.path_to_input_video)
+            self.com_removed_video_path = filename+'com_removed.mp4'
+            self.com_removed_srt_path = filename+'com_removed.srt'
+
+    def remove_commercial_from_video(self):
         commercialRemover = CommercialRemoverBasic(path_to_input_video=self.path_to_input_video,
-                                                   path_to_output_video=path_to_output_video)
+                                                   path_to_input_srt=self.path_to_input_srt,
+                                                   path_to_output_video=self.com_removed_video_path,
+                                                   path_to_output_srt=self.com_removed_srt_path)
         commercialRemover.remove_frames_with_commercial_break_in_progress()
 
-        return path_to_output_video
+        return self.com_removed_video_path, self.com_removed_srt_path
 
-    def shorten_video_stream(self,path_to_output_video):
+    def shorten_video_stream(self, path_to_output_video, path_to_output_srt):
 
         if(not self.commercial_removed):
-            self.remove_commercial_from_video(path_to_output_video)
+            self.com_removed_video_path, self.com_removed_srt_path = self.remove_commercial_from_video()
+        else:
+            self.com_removed_video_path, self.com_removed_srt_path= self.path_to_input_video, self.path_to_input_srt
 
-        stream = Stream(path_to_input_video=self.path_to_input_video, time_resolution=1)
+        stream = Stream(path_to_input_video=self.com_removed_video_path, time_resolution=1)
         getBoxes = GetBoxesInStream(stream)
         stats, mean_box_image = getBoxes.get_boxes()
         cv2.imwrite(filename='mean_box_image.png', img=mean_box_image)
