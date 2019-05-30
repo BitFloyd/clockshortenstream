@@ -18,7 +18,7 @@ class CommercialRemoverBasic:
         self.path_to_input_srt = path_to_input_srt
         self.path_to_output_video = path_to_output_video
         self.path_to_output_srt = path_to_output_srt
-        self.stream = Stream(path_to_input_video=self.path_to_input_video, time_resolution=None)
+        self.stream = Stream(path_to_input_video=self.path_to_input_video, time_resolution=1)
 
         self.save_path, self.output_filename = os.path.split(path_to_output_video)
 
@@ -56,7 +56,7 @@ class CommercialRemoverBasic:
 
         frame = self.stream.readNextFrameFromVideo()
 
-        progress_bar = tqdm(total=self.stream.time_in_seconds * self.stream.frameReader.videoFPS)
+        progress_bar = tqdm(total=int(self.stream.time_in_seconds / self.stream.time_resolution))
 
         ad_image_resized = cv2.resize(self.ad_image, dsize=None, fx=0.25, fy=0.25)
         ad_image_cropped = crop_image_to_percent(img=ad_image_resized, axis='y', part_image='bottom', percentage=0.65)

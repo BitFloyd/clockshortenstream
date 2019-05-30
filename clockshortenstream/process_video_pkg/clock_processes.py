@@ -422,10 +422,11 @@ class GetTimeIntervalsWithClocks:
 
 class WriteTimeIntervalsToVideo:
 
-    def __init__(self,stream,time_intervals,path_to_output_video):
+    def __init__(self,stream,time_intervals,path_to_output_video,path_to_output_srt):
         self.stream = stream
         self.time_intervals = time_intervals
         self.path_to_output_video = path_to_output_video
+        self.path_to_output_srt = path_to_output_srt
 
 
     def getFrameWriter(self,frame_shape,write_fps):
@@ -442,13 +443,13 @@ class WriteTimeIntervalsToVideo:
         list_of_clips = []
         list_of_subs = []
 
-        for times in self.times_of_non_commercial:
+        for times in self.time_intervals:
             time_of_all_clips_before = 0
             for clip in list_of_clips:
                 time_of_all_clips_before += clip.duration
 
-            list_of_clips.append(VideoFileClip(self.path_to_input_video).subclip(times[0], times[1]))
-            list_of_subs.append(SubtitleManager(self.path_to_input_srt).subclip(times[0],times[1], time_of_all_clips_before))
+            list_of_clips.append(VideoFileClip(self.time_intervals).subclip(times[0], times[1]))
+            list_of_subs.append(SubtitleManager(self.time_intervals).subclip(times[0],times[1],time_of_all_clips_before))
 
 
         final_clip = concatenate_videoclips(list_of_clips)
@@ -563,7 +564,9 @@ class ShortenVideoStream:
 
         writetimeintervals = WriteTimeIntervalsToVideo(stream=stream,
                                                        time_intervals=getTimeIntervals.list_time_intervals,
-                                                       path_to_output_video=path_to_output_video)
+                                                       path_to_output_video=path_to_output_video,
+                                                       path_to_output_srt=path_to_output_srt)
+
         writetimeintervals.write_time_intervals_to_video()
 
         return path_to_output_video

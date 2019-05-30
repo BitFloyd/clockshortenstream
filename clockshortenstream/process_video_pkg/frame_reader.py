@@ -18,6 +18,8 @@ class Stream:
 
         self.get_frameReader()
 
+        self.frameSequenceNumber = 0
+
     def process_debug_save_routine(self):
         debug_path = os.path.join(os.path.split(self.path_to_input_video)[0], 'debug_files')
         if (not os.path.exists(debug_path)):
@@ -44,13 +46,14 @@ class Stream:
 
     def readNextFrameFromVideo(self):
         frame = self.frameReader.getFrameAfterTSeconds(t=self.time_resolution)
+        self.frameSequenceNumber+=1
 
         self.videoFinished = self.frameReader.videoFinished
 
         return frame
 
     def getTimeOfFrameInSeconds(self):
-        time = self.frameReader.frameNumber*self.time_resolution
+        time = self.frameSequenceNumber*self.time_resolution
 
         return time
 
