@@ -89,8 +89,8 @@ class SubtitleManager:
 
         for ((i,j),txt) in self.subs_in_clip:
 
-            new_time_start = time_to_seconds(i[0])-t_start+t_prev
-            new_time_end = time_to_seconds(i[1])-t_start+t_prev
+            new_time_start = time_to_seconds(i)-t_start+t_prev
+            new_time_end = time_to_seconds(j)-t_start+t_prev
 
             line = txt
 
