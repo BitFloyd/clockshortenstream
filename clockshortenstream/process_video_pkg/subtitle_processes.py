@@ -1,8 +1,13 @@
 from commentaryanalysis.cleanSRT import read_and_clean_srt
-
+from datetime import time
 
 def time_to_string(t):
-    return t.strftime('%H:%M:%S,%f')
+    h = int(t/3600)
+    m = int((t - h*3600)/60)
+    s = int(t - h*3600 - m*60)
+    ms = int((t - int(t))*1e6)
+    t_value = time(h,m,s,ms)
+    return t_value.strftime('%H:%M:%S,%f')
 
 def time_to_seconds(t):
 
@@ -66,11 +71,6 @@ class SubtitlesClip():
             return "%s --> %s\n%s" % (fta, ftb, txt)
 
         return "\n\n".join(map(to_srt, self.subtitles))
-
-
-    def write_srt(self, filename):
-        with open(filename, 'w+') as f:
-            f.write(str(self))
 
 
 
