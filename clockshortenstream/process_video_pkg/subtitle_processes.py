@@ -7,7 +7,9 @@ def time_to_string(t):
     s = int(t - h*3600 - m*60)
     ms = int((t - int(t))*1e6)
     t_value = time(h,m,s,ms)
-    return t_value.strftime('%H:%M:%S,%f')
+    str_time =  t_value.strftime('%H:%M:%S,%f')
+    return str_time[0:-2]
+
 
 def time_to_seconds(t):
 
