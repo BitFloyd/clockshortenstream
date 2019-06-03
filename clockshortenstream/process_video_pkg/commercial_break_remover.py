@@ -1,10 +1,6 @@
 import inspect
-
-from moviepy.editor import VideoFileClip, concatenate_videoclips
 from skimage.measure import compare_ssim
 from tqdm import tqdm
-
-from subtitle_processes import SubtitleManager, concatenate_subtitles, SubtitlesClip
 from frame_reader import Stream
 from frame_writer import *
 from ..process_frame_pkg.framepy import *
@@ -32,23 +28,11 @@ class CommercialRemoverBasic:
         self.times_of_non_commercial = []
 
     def concatenate_clips(self):
-        list_of_clips = []
-        list_of_subs = []
 
-        for times in self.times_of_non_commercial:
-            time_of_all_clips_before = 0
-            for clip in list_of_clips:
-                time_of_all_clips_before += clip.duration
-
-            list_of_clips.append(VideoFileClip(self.path_to_input_video).subclip(times[0], times[1]))
-            list_of_subs.append(SubtitleManager(self.path_to_input_srt).subclip(times[0],times[1],time_of_all_clips_before))
-
-
-        final_clip = concatenate_videoclips(list_of_clips)
-        final_srt = concatenate_subtitles(list_of_subs)
-        final_clip.write_videofile(self.path_to_output_video)
-
-        SubtitlesClip(subtitles=final_srt).write_srt(self.path_to_output_srt)
+        writeTimeIntervals = WriteTimeIntervalsToNewVideo(self.times_of_non_commercial,self.path_to_input_video,
+                                                          self.path_to_input_srt, self.path_to_output_video,
+                                                          self.path_to_output_srt)
+        writeTimeIntervals.concatenate_clips()
 
         return True
 

@@ -1,9 +1,8 @@
 import os
 from frame_reader import Stream
-from subtitle_processes import SubtitleManager, concatenate_subtitles, SubtitlesClip
 from ..functionals_pkg.plot_functions import plot_histogram
 from skimage.io import imsave
-from frame_writer import FrameWriter
+from frame_writer import FrameWriter, WriteTimeIntervalsToNewVideo
 from tqdm import tqdm
 from ..process_frame_pkg.framepy import *
 import cv2
@@ -12,7 +11,6 @@ from ..logging_pkg.logging import *
 from ..functionals_pkg.save_objects import *
 from skimage.measure import compare_ssim
 from commercial_break_remover import CommercialRemoverBasic
-from moviepy.editor import VideoFileClip, concatenate_videoclips
 
 
 class GetBoxesInStream:
@@ -422,47 +420,22 @@ class GetTimeIntervalsWithClocks:
 
 class WriteTimeIntervalsToVideo:
 
-    def __init__(self,stream,time_intervals,path_to_output_video,path_to_output_srt):
+    def __init__(self,stream,time_intervals,path_to_output_video,path_to_output_srt,path_to_input_video,path_to_input_srt):
         self.stream = stream
         self.time_intervals = time_intervals
         self.path_to_output_video = path_to_output_video
         self.path_to_output_srt = path_to_output_srt
-
-
-    def getFrameWriter(self,frame_shape,write_fps):
-
-        (save_path,video_name) = os.path.split(self.path_to_output_video)
-
-        self.frameWriter = FrameWriter(save_path=save_path,
-                                  video_name=video_name,
-                                  frame_size=frame_shape,video_fps=write_fps)
-
-        return self.frameWriter
+        self.path_to_input_video = path_to_input_video
+        self.path_to_input_srt = path_to_input_srt
 
     def concatenate_clips(self):
-        list_of_clips = []
-        list_of_subs = []
-
-        for times in self.time_intervals:
-            time_of_all_clips_before = 0
-            for clip in list_of_clips:
-                time_of_all_clips_before += clip.duration
-
-            list_of_clips.append(VideoFileClip(self.time_intervals).subclip(times[0], times[1]))
-            list_of_subs.append(SubtitleManager(self.time_intervals).subclip(times[0],times[1],time_of_all_clips_before))
-
-
-        final_clip = concatenate_videoclips(list_of_clips)
-        final_srt = concatenate_subtitles(list_of_subs)
-        final_clip.write_videofile(self.path_to_output_video)
-
-        SubtitlesClip(subtitles=final_srt).write_srt(self.path_to_output_srt)
-
-        return True
+        writeTimeIntervals = WriteTimeIntervalsToNewVideo(self.time_intervals, self.path_to_input_video,
+                                                          self.path_to_input_srt, self.path_to_output_video,
+                                                          self.path_to_output_srt)
+        writeTimeIntervals.concatenate_clips()
 
     def write_time_intervals_to_video(self):
 
-        print self.time_intervals
         self.concatenate_clips()
 
         return True
@@ -565,7 +538,9 @@ class ShortenVideoStream:
         writetimeintervals = WriteTimeIntervalsToVideo(stream=stream,
                                                        time_intervals=getTimeIntervals.list_time_intervals,
                                                        path_to_output_video=path_to_output_video,
-                                                       path_to_output_srt=path_to_output_srt)
+                                                       path_to_output_srt=path_to_output_srt,
+                                                       path_to_input_video=self.path_to_input_video,
+                                                       path_to_input_srt=self.path_to_input_srt)
 
         writetimeintervals.write_time_intervals_to_video()
 
