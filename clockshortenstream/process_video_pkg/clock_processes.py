@@ -454,7 +454,7 @@ class DetectClockInVideo:
         stats, mean_box_image = getBoxes.get_boxes()
         cv2.imwrite(filename='mean_box_image.png', img=mean_box_image)
 
-        getLimits = GetXYLimitsOfBoxes(stats=stats, x_threshold=0.35, y_threshold=0.5)
+        getLimits = GetXYLimitsOfBoxes(stats=stats, x_threshold=0.35, y_threshold=0.35)
         limits, filtered_stats = getLimits.get_limits_stats()
 
 
@@ -539,8 +539,8 @@ class ShortenVideoStream:
                                                        time_intervals=getTimeIntervals.list_time_intervals,
                                                        path_to_output_video=path_to_output_video,
                                                        path_to_output_srt=path_to_output_srt,
-                                                       path_to_input_video=self.path_to_input_video,
-                                                       path_to_input_srt=self.path_to_input_srt)
+                                                       path_to_input_video=self.com_removed_video_path,
+                                                       path_to_input_srt=self.com_removed_srt_path)
 
         writetimeintervals.write_time_intervals_to_video()
 
