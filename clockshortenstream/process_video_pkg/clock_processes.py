@@ -15,11 +15,18 @@ from commercial_break_remover import CommercialRemoverBasic
 
 class GetBoxesInStream:
 
-    def __init__(self,stream,debug=False):
+    def __init__(self,stream, edge_trim_pixels = 10, debug=False):
         self.path_to_input_video = stream.path_to_input_video
         self.time_resolution = stream.time_resolution
         self.stream = stream
         self.debug = debug
+        self.edge_trim_pixels = edge_trim_pixels
+
+    def get_cropped_frame(self,frame):
+        cropped_frame = crop_image_to_percent(img=frame,axis='y',part_image='top',percentage=0.25)
+        cropped_frame = trim_edges_of_image(cropped_frame,pixels=self.edge_trim_pixels)
+
+        return cropped_frame
 
     def get_boxes(self):
 
@@ -27,7 +34,8 @@ class GetBoxesInStream:
         progress_bar = tqdm(total=self.stream.num_read_iterations)
         frame = self.stream.readNextFrameFromVideo()
 
-        cropped_frame = crop_image_to_percent(img=frame,axis='y',part_image='top',percentage=0.25)
+        cropped_frame = self.get_cropped_frame(frame)
+
         mean_box_image = np.zeros((cropped_frame.shape[0],cropped_frame.shape[1]))
 
 
@@ -36,7 +44,7 @@ class GetBoxesInStream:
 
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
-            frame = crop_image_to_percent(img=frame,axis='y',part_image='top',percentage=0.25)
+            frame = self.get_cropped_frame(frame)
             if(self.debug):
                 imsave(fname=os.path.join(self.stream.debug_path,str(i)+'_agrey_frame.png'),arr=frame)
 
@@ -79,30 +87,31 @@ class GetBoxesInStream:
 
 class GetXYLimitsOfBoxes:
 
-    def __init__(self,stats,x_threshold,y_threshold):
+    def __init__(self,stats,x_threshold,y_threshold,edge_trim_pixels=10):
 
         self.x_threshold = x_threshold
         self.y_threshold = y_threshold
 
         self.x_stats = stats[0]
         self.y_stats = stats[1]
+        self.edge_trim_pixels = edge_trim_pixels
 
 
 
     def get_limits_stats(self):
 
         x_stats = self.x_stats[0] / np.max(self.x_stats[0])
-
         x_stats = (x_stats * (x_stats > self.x_threshold)).tolist()
         x_stats_limits = [n for n, i in enumerate(x_stats) if i > 0]
-        x_limits = (x_stats_limits[0], x_stats_limits[-1])
+        x_limits = (x_stats_limits[0]+self.edge_trim_pixels, x_stats_limits[-1]+self.edge_trim_pixels)
         print ('x_limits:', x_limits)
+
 
         y_stats = self.y_stats.transpose()[0] / np.max(self.y_stats.transpose()[0])
 
         y_stats = (y_stats * (y_stats > self.y_threshold)).tolist()
         y_stats_limits = [n for n, i in enumerate(y_stats) if i > 0]
-        y_limits = (y_stats_limits[0], y_stats_limits[-1])
+        y_limits = (y_stats_limits[0]+self.edge_trim_pixels, y_stats_limits[-1]+self.edge_trim_pixels)
         print ('y_limits:', y_limits)
 
         self.limits = (x_limits,y_limits)
@@ -450,11 +459,11 @@ class DetectClockInVideo:
     def detect_clock(self):
 
         stream = Stream(path_to_input_video=self.path_to_input_video, time_resolution=1)
-        getBoxes = GetBoxesInStream(stream)
+        getBoxes = GetBoxesInStream(stream,edge_trim_pixels=10)
         stats, mean_box_image = getBoxes.get_boxes()
         cv2.imwrite(filename='mean_box_image.png', img=mean_box_image)
 
-        getLimits = GetXYLimitsOfBoxes(stats=stats, x_threshold=0.35, y_threshold=0.35)
+        getLimits = GetXYLimitsOfBoxes(stats=stats, x_threshold=0.35, y_threshold=0.5,edge_trim_pixels=10)
         limits, filtered_stats = getLimits.get_limits_stats()
 
 
@@ -513,11 +522,11 @@ class ShortenVideoStream:
             self.com_removed_video_path, self.com_removed_srt_path= self.path_to_input_video, self.path_to_input_srt
 
         stream = Stream(path_to_input_video=self.com_removed_video_path, time_resolution=1)
-        getBoxes = GetBoxesInStream(stream)
+        getBoxes = GetBoxesInStream(stream,edge_trim_pixels=10)
         stats, mean_box_image = getBoxes.get_boxes()
         cv2.imwrite(filename='mean_box_image.png', img=mean_box_image)
 
-        getLimits = GetXYLimitsOfBoxes(stats=stats, x_threshold=0.35, y_threshold=0.5)
+        getLimits = GetXYLimitsOfBoxes(stats=stats, x_threshold=0.35, y_threshold=0.35,edge_trim_pixels=10)
         limits, filtered_stats = getLimits.get_limits_stats()
 
 
