@@ -22,13 +22,12 @@ USAGE:
 ```
 from clockshortenstream.process_video_pkg.clock_processes import ShortenVideoStream,CommercialRemoverBasic
 
-path_to_input_video = '/home/seby/Seby Main/PhD/REPOSITORY/test_data/SJS-CAR-HOME_com_brk_removed.mp4'
-path_to_video_wo_commercial = '/home/seby/Seby Main/PhD/REPOSITORY/test_data/SJS-CAR-HOME-no-commercial.mp4'
-path_to_shortened_video = '/home/seby/Seby Main/PhD/REPOSITORY/test_data/SJS-CAR-HOME-shortened.mp4'
+path_to_input_video = '/home/seby/Seby Main/PhD/REPOSITORY/test_data/SJS-CAR-HOME.mp4'
+path_to_input_video_srt = '/home/seby/Seby Main/PhD/REPOSITORY/test_data/SJS-CAR-HOME.srt'
 
-commRemover = CommercialRemoverBasic(path_to_input_video=path_to_input_video,path_to_output_video=path_to_video_wo_commercial)
-commRemover.remove_frames_with_commercial_break_in_progress()
+path_to_shortened_video = '/home/seby/Seby Main/PhD/REPOSITORY/test_data/shortened_video.mp4'
+path_to_shortened_video_srt = '/home/seby/Seby Main/PhD/REPOSITORY/test_data/shortened_video.srt'
 
-svs = ShortenVideoStream(path_to_input_video=path_to_video_wo_commercial)
-svs.shorten_video_stream(path_to_output_video=path_to_shortened_video)
+svs = ShortenVideoStream(path_to_input_video=path_to_input_video, path_to_input_srt=path_to_input_video_srt, commercial_removed=False)
+svs.shorten_video_stream( path_to_output_video=path_to_shortened_video, path_to_output_srt=path_to_shortened_video_srt)
 ```

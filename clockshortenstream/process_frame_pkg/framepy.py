@@ -7,8 +7,6 @@ def binary_threshold(img):
 
     assert len(img.shape)==2
     (thresh, img_bin) = cv2.threshold(img, 128, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)
-    # Invert the image
-    # img_bin = 255 - img_bin
 
     return img_bin
 
@@ -115,23 +113,33 @@ def draw_rectangle_on_image(image,x_limits,y_limits):
     pt2 = (x_limits[1],y_limits[1])
     return cv2.rectangle(image, pt1,pt2,(0, 255, 0), 3)
 
+def trim_edges_of_image(image,pixels=10):
+
+    return image[pixels:-pixels, pixels:-pixels]
+
+
 def get_boxes_in_image(bin_img):
 
 
-    vertical_kernel_length = int(bin_img.shape[1]/50)
-    vertical_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (1, vertical_kernel_length))
+    vertical_kernel_length_erode = int(bin_img.shape[1]/50)
+    vertical_kernel_erode = cv2.getStructuringElement(cv2.MORPH_RECT, (1, vertical_kernel_length_erode))
+    vertical_kernel_length_dilate = 10
+    vertical_kernel_dilate = cv2.getStructuringElement(cv2.MORPH_RECT,(1,vertical_kernel_length_dilate))
 
-    horizontal_kernel_length = int(bin_img.shape[0]/5)
-    horizontal_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (horizontal_kernel_length, 1))
+    horizontal_kernel_length_erode = int(bin_img.shape[0]/5)
+    horizontal_kernel_erode = cv2.getStructuringElement(cv2.MORPH_RECT, (horizontal_kernel_length_erode, 1))
+    horizontal_kernel_length_dilate = 100
+    horizontal_kernel_dilate = cv2.getStructuringElement(cv2.MORPH_RECT,(horizontal_kernel_length_dilate,1))
+
 
     iterations = 1
     # Morphological operation to detect vertical lines from an image
-    img_temp_vertical = cv2.erode(bin_img, vertical_kernel, iterations=iterations)
-    vertical_lines_img = cv2.dilate(img_temp_vertical, vertical_kernel, iterations=iterations)
+    img_temp_vertical = cv2.erode(bin_img, vertical_kernel_erode, iterations=iterations)
+    vertical_lines_img = cv2.dilate(img_temp_vertical, vertical_kernel_dilate, iterations=iterations)
 
     # Morphological operation to detect horizontal lines from an image
-    img_temp_horizontal = cv2.erode(bin_img, horizontal_kernel, iterations=iterations)
-    horizontal_lines_img = cv2.dilate(img_temp_horizontal, horizontal_kernel, iterations=iterations)
+    img_temp_horizontal = cv2.erode(bin_img, horizontal_kernel_erode, iterations=iterations)
+    horizontal_lines_img = cv2.dilate(img_temp_horizontal, horizontal_kernel_dilate, iterations=iterations)
 
     # kernel = cv2.getStructuringElement(cv2.MORPH_RECT,(2,2))
 

@@ -1,9 +1,8 @@
 import os
 from frame_reader import Stream
-from subtitle_processes import SubtitleManager, concatenate_subtitles, SubtitlesClip
 from ..functionals_pkg.plot_functions import plot_histogram
 from skimage.io import imsave
-from frame_writer import FrameWriter
+from frame_writer import FrameWriter, WriteTimeIntervalsToNewVideo
 from tqdm import tqdm
 from ..process_frame_pkg.framepy import *
 import cv2
@@ -12,16 +11,22 @@ from ..logging_pkg.logging import *
 from ..functionals_pkg.save_objects import *
 from skimage.measure import compare_ssim
 from commercial_break_remover import CommercialRemoverBasic
-from moviepy.editor import VideoFileClip, concatenate_videoclips
 
 
 class GetBoxesInStream:
 
-    def __init__(self,stream,debug=False):
+    def __init__(self,stream, edge_trim_pixels = 10, debug=False):
         self.path_to_input_video = stream.path_to_input_video
         self.time_resolution = stream.time_resolution
         self.stream = stream
         self.debug = debug
+        self.edge_trim_pixels = edge_trim_pixels
+
+    def get_cropped_frame(self,frame):
+        cropped_frame = crop_image_to_percent(img=frame,axis='y',part_image='top',percentage=0.25)
+        cropped_frame = trim_edges_of_image(cropped_frame,pixels=self.edge_trim_pixels)
+
+        return cropped_frame
 
     def get_boxes(self):
 
@@ -29,7 +34,8 @@ class GetBoxesInStream:
         progress_bar = tqdm(total=self.stream.num_read_iterations)
         frame = self.stream.readNextFrameFromVideo()
 
-        cropped_frame = crop_image_to_percent(img=frame,axis='y',part_image='top',percentage=0.25)
+        cropped_frame = self.get_cropped_frame(frame)
+
         mean_box_image = np.zeros((cropped_frame.shape[0],cropped_frame.shape[1]))
 
 
@@ -38,7 +44,7 @@ class GetBoxesInStream:
 
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
-            frame = crop_image_to_percent(img=frame,axis='y',part_image='top',percentage=0.25)
+            frame = self.get_cropped_frame(frame)
             if(self.debug):
                 imsave(fname=os.path.join(self.stream.debug_path,str(i)+'_agrey_frame.png'),arr=frame)
 
@@ -81,30 +87,31 @@ class GetBoxesInStream:
 
 class GetXYLimitsOfBoxes:
 
-    def __init__(self,stats,x_threshold,y_threshold):
+    def __init__(self,stats,x_threshold,y_threshold,edge_trim_pixels=10):
 
         self.x_threshold = x_threshold
         self.y_threshold = y_threshold
 
         self.x_stats = stats[0]
         self.y_stats = stats[1]
+        self.edge_trim_pixels = edge_trim_pixels
 
 
 
     def get_limits_stats(self):
 
         x_stats = self.x_stats[0] / np.max(self.x_stats[0])
-
         x_stats = (x_stats * (x_stats > self.x_threshold)).tolist()
         x_stats_limits = [n for n, i in enumerate(x_stats) if i > 0]
-        x_limits = (x_stats_limits[0], x_stats_limits[-1])
+        x_limits = (x_stats_limits[0]+self.edge_trim_pixels, x_stats_limits[-1]+self.edge_trim_pixels)
         print ('x_limits:', x_limits)
+
 
         y_stats = self.y_stats.transpose()[0] / np.max(self.y_stats.transpose()[0])
 
         y_stats = (y_stats * (y_stats > self.y_threshold)).tolist()
         y_stats_limits = [n for n, i in enumerate(y_stats) if i > 0]
-        y_limits = (y_stats_limits[0], y_stats_limits[-1])
+        y_limits = (y_stats_limits[0]+self.edge_trim_pixels, y_stats_limits[-1]+self.edge_trim_pixels)
         print ('y_limits:', y_limits)
 
         self.limits = (x_limits,y_limits)
@@ -422,47 +429,22 @@ class GetTimeIntervalsWithClocks:
 
 class WriteTimeIntervalsToVideo:
 
-    def __init__(self,stream,time_intervals,path_to_output_video,path_to_output_srt):
+    def __init__(self,stream,time_intervals,path_to_output_video,path_to_output_srt,path_to_input_video,path_to_input_srt):
         self.stream = stream
         self.time_intervals = time_intervals
         self.path_to_output_video = path_to_output_video
         self.path_to_output_srt = path_to_output_srt
-
-
-    def getFrameWriter(self,frame_shape,write_fps):
-
-        (save_path,video_name) = os.path.split(self.path_to_output_video)
-
-        self.frameWriter = FrameWriter(save_path=save_path,
-                                  video_name=video_name,
-                                  frame_size=frame_shape,video_fps=write_fps)
-
-        return self.frameWriter
+        self.path_to_input_video = path_to_input_video
+        self.path_to_input_srt = path_to_input_srt
 
     def concatenate_clips(self):
-        list_of_clips = []
-        list_of_subs = []
-
-        for times in self.time_intervals:
-            time_of_all_clips_before = 0
-            for clip in list_of_clips:
-                time_of_all_clips_before += clip.duration
-
-            list_of_clips.append(VideoFileClip(self.time_intervals).subclip(times[0], times[1]))
-            list_of_subs.append(SubtitleManager(self.time_intervals).subclip(times[0],times[1],time_of_all_clips_before))
-
-
-        final_clip = concatenate_videoclips(list_of_clips)
-        final_srt = concatenate_subtitles(list_of_subs)
-        final_clip.write_videofile(self.path_to_output_video)
-
-        SubtitlesClip(subtitles=final_srt).write_srt(self.path_to_output_srt)
-
-        return True
+        writeTimeIntervals = WriteTimeIntervalsToNewVideo(self.time_intervals, self.path_to_input_video,
+                                                          self.path_to_input_srt, self.path_to_output_video,
+                                                          self.path_to_output_srt)
+        writeTimeIntervals.concatenate_clips()
 
     def write_time_intervals_to_video(self):
 
-        print self.time_intervals
         self.concatenate_clips()
 
         return True
@@ -477,11 +459,11 @@ class DetectClockInVideo:
     def detect_clock(self):
 
         stream = Stream(path_to_input_video=self.path_to_input_video, time_resolution=1)
-        getBoxes = GetBoxesInStream(stream)
+        getBoxes = GetBoxesInStream(stream,edge_trim_pixels=10)
         stats, mean_box_image = getBoxes.get_boxes()
         cv2.imwrite(filename='mean_box_image.png', img=mean_box_image)
 
-        getLimits = GetXYLimitsOfBoxes(stats=stats, x_threshold=0.35, y_threshold=0.5)
+        getLimits = GetXYLimitsOfBoxes(stats=stats, x_threshold=0.35, y_threshold=0.5,edge_trim_pixels=10)
         limits, filtered_stats = getLimits.get_limits_stats()
 
 
@@ -540,11 +522,11 @@ class ShortenVideoStream:
             self.com_removed_video_path, self.com_removed_srt_path= self.path_to_input_video, self.path_to_input_srt
 
         stream = Stream(path_to_input_video=self.com_removed_video_path, time_resolution=1)
-        getBoxes = GetBoxesInStream(stream)
+        getBoxes = GetBoxesInStream(stream,edge_trim_pixels=10)
         stats, mean_box_image = getBoxes.get_boxes()
         cv2.imwrite(filename='mean_box_image.png', img=mean_box_image)
 
-        getLimits = GetXYLimitsOfBoxes(stats=stats, x_threshold=0.35, y_threshold=0.5)
+        getLimits = GetXYLimitsOfBoxes(stats=stats, x_threshold=0.35, y_threshold=0.35,edge_trim_pixels=10)
         limits, filtered_stats = getLimits.get_limits_stats()
 
 
@@ -565,7 +547,9 @@ class ShortenVideoStream:
         writetimeintervals = WriteTimeIntervalsToVideo(stream=stream,
                                                        time_intervals=getTimeIntervals.list_time_intervals,
                                                        path_to_output_video=path_to_output_video,
-                                                       path_to_output_srt=path_to_output_srt)
+                                                       path_to_output_srt=path_to_output_srt,
+                                                       path_to_input_video=self.com_removed_video_path,
+                                                       path_to_input_srt=self.com_removed_srt_path)
 
         writetimeintervals.write_time_intervals_to_video()
 
